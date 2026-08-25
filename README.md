@@ -49,3 +49,46 @@ schedule. Adding a plugin here does not affect installs of the others.
 ## License
 
 MIT
+
+## Maintaining this marketplace
+
+The manifest is [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json).
+Validate any edit before pushing — a broken manifest breaks `plugin install`
+for everyone, and nothing here runs locally:
+
+```bash
+python3 scripts/validate-marketplace.py --network
+```
+
+**Adding a plugin** — append an entry with `name`, `description`, and a
+`source` pointing at its repository:
+
+```json
+{
+    "name": "my-plugin",
+    "source": { "source": "url", "url": "https://github.com/anaidenko/my-plugin.git" },
+    "description": "One line, shown in the plugin browser."
+}
+```
+
+The `name` is the install coordinate (`my-plugin@anaidenko`) and must match the
+plugin's own `.claude-plugin/plugin.json`.
+
+**Releasing a new version of a plugin** — nothing to do here. Plugin versions
+are read from each plugin repo's `plugin.json` at install time, so a release is
+just a push in that repo. This manifest deliberately carries no `version`
+fields; adding one would mean keeping it in sync on every release.
+
+**Renaming or moving a plugin repo** — update its `url` here in the same pass,
+otherwise installs keep resolving to the old location until GitHub's redirect
+lapses.
+
+**Changing a plugin's description** — the copy here is what the plugin browser
+shows; the plugin's own README is separate. Update both, or they drift.
+
+**Never rename this marketplace.** Its `name` (`anaidenko`) is the install
+coordinate every user has on disk, and marketplaces are keyed by that name
+rather than by repo URL — two manifests sharing a name silently fight over one
+slot, and the loser's plugins stay `enabled` while failing to load, with their
+hooks quietly dead. That is why these plugins live in one shared marketplace
+instead of each declaring their own.
