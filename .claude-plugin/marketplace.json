@@ -1,0 +1,29 @@
+{
+    "name": "anaidenko",
+    "owner": {
+        "name": "Andrii Naidenko",
+        "url": "https://github.com/anaidenko"
+    },
+    "metadata": {
+        "description": "Claude Code plugins by Andrii Naidenko.",
+        "version": "1.0.0"
+    },
+    "plugins": [
+        {
+            "name": "claude-notify-resume",
+            "source": {
+                "source": "url",
+                "url": "https://github.com/anaidenko/claude-notify-resume.git"
+            },
+            "description": "Desktop notifications that name the conversation they came from — and reopen it when clicked."
+        },
+        {
+            "name": "claude-video-digest",
+            "source": {
+                "source": "url",
+                "url": "https://github.com/anaidenko/claude-video-digest.git"
+            },
+            "description": "Turns any video into a readable digest — timestamped contact sheet, frame-grouped transcript, no hallucinated captions on silent tracks."
+        }
+    ]
+}
