@@ -2,9 +2,26 @@
 
 This repository holds only the marketplace manifest,
 [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json). Each
-plugin lives in its own repository and is referenced by URL, so plugins release
-on their own schedule, and adding a plugin here does not affect installs of the
-others.
+plugin lives in its own repository and is installed from its npm package, so
+plugins release on their own schedule, and adding a plugin here does not affect
+installs of the others.
+
+## Why npm, not the git repo
+
+Until 2026-11-16 the entries pointed at each repo by URL. They point at npm now
+for two reasons:
+
+- **Only a published release reaches users.** A git source served whatever
+  `main` held, so a pushed commit was live before its tag, its npm version and
+  its GitHub Release existed.
+- **Installs count as npm downloads.** npm's search ranks a package with zero
+  downloads below everything else, even for its exact name, and installs through
+  git never showed up in the count.
+
+Checked before the switch, in an isolated `CLAUDE_CONFIG_DIR`: an npm install
+lands in the same `cache/anaidenko/<plugin>/<version>/` as a git one, with the
+package root as the plugin root and file modes intact. An existing git install
+at the current version stays as it is. The next version replaces it from npm.
 
 ## Validating
 
@@ -15,51 +32,62 @@ for everyone, and nothing here runs locally:
 python3 scripts/validate-marketplace.py --network
 ```
 
-CI runs the same check on every push, and weekly: a referenced repo can be
-renamed or made private without a commit landing here.
+CI runs the same check on every push, and weekly: a package can be deprecated,
+or its `latest` tag moved, without a commit landing here. With `--network` it
+reads what a user's install would get: `latest` must be a stable version whose
+tarball carries a `plugin.json` of the same name.
 
 ## Adding a plugin
 
-Append an entry with `name`, `description`, and a `source` pointing at its
-repository:
+Append an entry with `name`, `description`, and a `source` naming its npm
+package:
 
 ```json
 {
     "name": "my-plugin",
-    "source": { "source": "url", "url": "https://github.com/anaidenko/my-plugin.git" },
+    "source": { "source": "npm", "package": "@anaidenko/my-plugin" },
     "description": "One line, shown in the plugin browser."
 }
 ```
 
 The `name` is the install coordinate (`my-plugin@anaidenko`) and must match the
 plugin's own `.claude-plugin/plugin.json`. Add it to the list in the README
-too.
+too. Leave out `version`: without it every user gets `latest`, and the
+validator rejects a pinned one.
 
 The plugin repo also takes the shared installer and release pipeline (see
 [Shared across the plugin repos](#shared-across-the-plugin-repos)), and its
 first npm publish is made by hand before CI can take over: the release skill's
-*First publish* walks through it.
+*First publish* walks through it. **Add the entry only after that first release
+is npm's `latest`.** During a first publish npm tags a `0.0.0-stage`
+placeholder as `latest` for a couple of minutes, and the release candidate goes
+out under `next`; an entry added earlier would install either one.
+
+The package's `files` must carry everything the plugin runs: the tarball *is*
+the installed plugin, and nothing outside it reaches users.
 
 ## Releasing a plugin
 
 Nothing to do here. Each plugin repo releases with its own `/release` skill: a
-version tag runs that repo's `publish.yml`, which publishes the npm installer
-and then creates the GitHub Release. This manifest deliberately carries no
-`version` fields; versions are read from each plugin's `plugin.json` at install
-time.
+version tag runs that repo's `publish.yml`, which publishes to npm and then
+creates the GitHub Release. This manifest deliberately carries no `version`
+fields; the installed version is read from the package's `plugin.json`.
 
-Mind what reaches users when: the marketplace serves the plugin repo's default
-branch, not its tags. So push the release commit and its tag together
-(`git push --follow-tags`). The commit alone is a release that npm and GitHub
-do not know about yet, and the tag alone (`git push --tags`) publishes to npm
-while marketplace users stay on the old version.
+Mind what reaches users when: the marketplace installs npm's `latest`, so a
+release reaches users once `publish.yml` has published it, and not before.
+Pushing `main` alone changes nothing for them. Anything published to npm
+without `--tag next`, a release candidate included, becomes `latest` and goes
+to every user.
 
 ## Renaming or moving a plugin repo
 
-Update its `url` here in the same pass, otherwise installs keep resolving to the
-old location until GitHub's redirect lapses. Update its npm trusted publisher
-too, which names the repository, or the next release fails to publish. Also
-update `homepage` in its `package.json`, which the installer prints.
+Nothing to change here: the entry names the npm package, not the repo. Update
+the package's npm trusted publisher, which names the repository, or the next
+release fails to publish. Also update `homepage` in its `package.json`, which
+the installer prints.
+
+A renamed npm *package* does need its entry here updated in the same pass. The
+old name keeps serving its last version until then.
 
 ## Changing a plugin's description
 
