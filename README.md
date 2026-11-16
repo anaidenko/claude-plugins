@@ -86,6 +86,18 @@ lapses.
 **Changing a plugin's description** — the copy here is what the plugin browser
 shows; the plugin's own README is separate. Update both, or they drift.
 
+**Working on the plugins** — for changes that span several plugins, `plugins/`
+holds symlinks to the plugin repos cloned next to this one. They are local
+only (gitignored), so recreate them on a fresh checkout:
+
+```bash
+mkdir -p plugins
+ln -s ../../claude-notify-resume plugins/claude-notify-resume
+ln -s ../../claude-video-digest plugins/claude-video-digest
+```
+
+Each link is its own git repository: commit and push inside it, not here.
+
 **Never rename this marketplace.** Its `name` (`anaidenko`) is the install
 coordinate every user has on disk, and marketplaces are keyed by that name
 rather than by repo URL — two manifests sharing a name silently fight over one
