@@ -1,4 +1,4 @@
 .DS_Store
 
-# Local symlinks to sibling plugin repos (see README, "Working on the plugins")
+# Local symlinks to sibling plugin repos (see CONTRIBUTING.md, "Working on the plugins")
 /plugins/
