@@ -14,9 +14,10 @@ for two reasons:
 - **Only a published release reaches users.** A git source served whatever
   `main` held, so a pushed commit was live before its tag, its npm version and
   its GitHub Release existed.
-- **Installs count as npm downloads.** npm's search ranks a package with zero
-  downloads below everything else, even for its exact name, and installs through
-  git never showed up in the count.
+- **Installs should count as npm downloads,** which installs through git never
+  did (not yet checked against the downloads API). This turned out to matter
+  less for search than expected: what gets a new package listed is a second
+  release, not installs. See [Being found in npm search](#being-found-in-npm-search).
 
 Checked before the switch, in an isolated `CLAUDE_CONFIG_DIR`: an npm install
 lands in the same `cache/anaidenko/<plugin>/<version>/` as a git one, with the
@@ -65,6 +66,42 @@ out under `next`; an entry added earlier would install either one.
 
 The package's `files` must carry everything the plugin runs: the tarball *is*
 the installed plugin, and nothing outside it reaches users.
+
+Then **release once more on a later UTC day**, even if only a patch. Until
+then npm's search does not list the package at all, not even by its exact name.
+
+## Being found in npm search
+
+npm's search, on the website and at `registry.npmjs.org/-/v1/search`, weighs the
+text match by the download count stored in its index, and a stored count of 0
+leaves a package out of the results entirely. The index refreshes that count
+when a version is published, and the downloads API reports a day only once it
+has ended (UTC). So a package published only on the day it was created stays
+invisible however many downloads it has. Waiting does not fix it; the next
+publish does.
+
+Both plugins went through this. On 2026-11-16 they were created and published,
+and the next morning the index still held 0 for each, while the downloads API
+showed 788 and 427. Neither ranked in the top 250 for its own name. On
+2026-11-17 claude-video-digest 1.3.0 came out. About an hour later its index
+count was 427, and it was #1 for its name. claude-notify-resume, not yet
+republished, stayed at 0. It caught up within minutes of its own 1.6.1 release.
+
+To check, look at the `downloads` field:
+
+```bash
+curl -s 'https://registry.npmjs.org/-/v1/search?text=maintainer:anaidenko' |
+  python3 -c 'import json,sys; [print(o["package"]["name"], o["downloads"]) for o in json.load(sys.stdin)["objects"]]'
+```
+
+The numbers say little about users. Each published version draws about 150
+downloads within a day from mirrors and scanners. The `0.0.0-stage`
+placeholder, which was `latest` for two minutes, got 149. So a busy release
+day shows up as a jump in weekly downloads, and the jump leaves the 7-day
+window a week later. Do not publish versions to move the count: once it is
+above zero, the text match outweighs volume. A package with 4 weekly downloads
+ranked #1 for "claude code notification", above packages with millions. The
+phrase in the description decides it, and keywords count for little.
 
 ## Releasing a plugin
 
